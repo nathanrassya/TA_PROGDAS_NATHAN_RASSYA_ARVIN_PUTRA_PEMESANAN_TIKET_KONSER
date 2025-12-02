@@ -1,0 +1,247 @@
+import tkinter as tk
+from tkinter import messagebox
+from datetime import datetime
+import time
+from collections import deque
+
+
+class Ticket:
+    def __init__(self, nama, konser, kelas, jumlah, total):
+        self.nama = nama
+        self.konser = konser
+        self.kelas = kelas
+        self.jumlah = jumlah
+        self.total = total
+        self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+
+
+class TicketApp:
+    def __init__(self, root):
+        self.root = root
+        root.title("Aplikasi Pemesanan Tiket Konser")
+        root.geometry("520x700")
+        root.config(bg="#1e1e1e")
+
+        
+        self.bg = "#1e1e1e"
+        self.panel = "#2c2c2c"
+        self.accent = "#0084ff"
+        self.white = "#ffffff"
+
+        self.stackRiwayat = []        # LIFO
+        self.queueRiwayat = deque()   # FIFO
+
+       
+        self.title = tk.Label(root, text="TIKET KONSER",
+                              font=("Arial", 26, "bold"),
+                              fg=self.accent, bg=self.bg)
+        self.title.pack(pady=15)
+
+        
+        self.frame = tk.Frame(root, bg=self.panel, bd=2, relief="groove")
+        self.frame.pack(padx=25, pady=10, fill="both")
+
+        self.build_form()
+
+        
+        self.output = tk.Label(root, text="", font=("Arial", 10),
+                               fg=self.white, bg=self.bg, justify="left")
+        self.output.pack(pady=10)
+
+       
+        self.processing_frame = tk.Frame(root, bg=self.bg)
+        self.processing_text = tk.Label(self.processing_frame, text="Processing...",
+                                        font=("Arial", 20, "bold"),
+                                        fg=self.white, bg=self.bg)
+        self.processing_text.pack(pady=80)
+
+        self.processing_bar = tk.Label(self.processing_frame, text="",
+                                       font=("Arial", 25),
+                                       fg=self.accent, bg=self.bg)
+        self.processing_bar.pack()
+
+        
+        self.qr_frame = tk.Frame(root, bg=self.bg)
+        self.qr_label = tk.Label(self.qr_frame, text="",
+                                 font=("Courier", 10, "bold"),
+                                 fg=self.white, bg=self.panel,
+                                 bd=3, relief="groove")
+        self.qr_label.pack(pady=10)
+
+        
+        self.back_btn = tk.Button(self.qr_frame, text="Kembali ke Halaman Awal",
+                                  font=("Arial", 11, "bold"),
+                                  bg=self.accent, fg="white",
+                                  command=self.go_back)
+        self.back_btn.pack(pady=5)
+
+       
+        tk.Button(root, text="Lihat Pemesanan Terakhir (STACK)",
+                  bg=self.accent, fg="white", font=("Arial", 11, "bold"),
+                  command=self.show_stack).pack(pady=5)
+
+        tk.Button(root, text="Lihat Semua Pemesan (QUEUE)",
+                  bg=self.accent, fg="white", font=("Arial", 11, "bold"),
+                  command=self.show_queue).pack(pady=5)
+
+    
+    def build_form(self):
+        tk.Label(self.frame, text="Nama Pemesan",
+                 font=("Arial", 12, "bold"),
+                 fg=self.white, bg=self.panel).pack(pady=6)
+
+        self.nama_entry = tk.Entry(self.frame, font=("Arial", 12), width=30)
+        self.nama_entry.pack(pady=3)
+
+        tk.Label(self.frame, text="Pilih Konser",
+                 font=("Arial", 12, "bold"),
+                 fg=self.white, bg=self.panel).pack(pady=6)
+
+        self.konser_var = tk.StringVar(value="DEWA 19")
+        menu1 = tk.OptionMenu(self.frame, self.konser_var,
+                              "DEWA 19", "PERUNGGU", "TULUS")
+        menu1.config(width=27, font=("Arial", 11))
+        menu1.pack(pady=3)
+
+        tk.Label(self.frame, text="Pilih Kelas",
+                 font=("Arial", 12, "bold"),
+                 fg=self.white, bg=self.panel).pack(pady=6)
+
+        self.kelas_var = tk.StringVar(value="VIP")
+        menu2 = tk.OptionMenu(self.frame, self.kelas_var,
+                              "VIP", "Reguler", "Festival")
+        menu2.config(width=27, font=("Arial", 11))
+        menu2.pack(pady=3)
+
+        tk.Label(self.frame, text="Jumlah Tiket",
+                 font=("Arial", 12, "bold"),
+                 fg=self.white, bg=self.panel).pack(pady=6)
+
+        self.jumlah_entry = tk.Entry(self.frame, font=("Arial", 12), width=15)
+        self.jumlah_entry.pack(pady=3)
+
+        btn = tk.Button(self.frame, text="Pesan Tiket",
+                        font=("Arial", 12, "bold"),
+                        bg=self.accent, fg=self.white, width=20,
+                        command=self.start_processing)
+        btn.pack(pady=15)
+
+   
+    def start_processing(self):
+        self.frame.pack_forget()
+        self.output.config(text="")
+        self.qr_frame.pack_forget()
+        self.processing_frame.pack(fill="both")
+
+        self.animate_fade_slide()
+        self.root.after(2500, self.pesan)
+
+    def animate_fade_slide(self):
+        bar = ""
+        for i in range(12):
+            bar += "█"
+            self.processing_bar.config(text=bar)
+            self.root.update()
+            time.sleep(0.08)
+
+   
+    def pesan(self):
+        self.processing_frame.pack_forget()
+
+        nama = self.nama_entry.get()
+        kelas = self.kelas_var.get()
+        konser = self.konser_var.get()
+        jumlah = self.jumlah_entry.get()
+
+        if not nama or not jumlah.isdigit() or int(jumlah) < 1:
+            messagebox.showerror("Error", "Isi nama & jumlah tiket yang benar!")
+            return
+
+        jumlah = int(jumlah)
+
+        harga = {"VIP": 1500000, "Reguler": 600000, "Festival": 300000}
+        total = harga[kelas] * jumlah
+
+        if jumlah >= 5:
+            total *= 0.90
+
+        tiket = Ticket(nama, konser, kelas, jumlah, int(total))
+
+        self.stackRiwayat.append(tiket)
+        self.queueRiwayat.append(tiket)
+
+        self.output.config(text=f"""
+==== DETAIL PEMESANAN ====
+Nama      : {tiket.nama}
+Konser    : {tiket.konser}
+Kelas     : {tiket.kelas}
+Jumlah    : {tiket.jumlah}
+Tanggal   : {tiket.timestamp}
+
+Total Bayar: Rp {tiket.total:,}
+==========================
+""")
+
+        self.show_fake_qr(tiket)
+
+        self.frame.pack(padx=25, pady=10, fill="both")
+
+    
+    def show_fake_qr(self, tiket):
+        qr_text = f"""
+██████████████████
+█ ▄▄▄▄▄ █▀█▀█ ▄▄▄ █
+█ █   █ █▀█▀█ █▄█ █
+█ █▄▄▄█ █▄█▄█▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█▄█▄█▄█▄█
+
+Nama   : {tiket.nama}
+Konser : {tiket.konser}
+Kelas  : {tiket.kelas}
+Tiket  : {tiket.jumlah}
+"""
+        self.qr_label.config(text=qr_text)
+        self.qr_frame.pack(pady=5)
+
+    
+    def go_back(self):
+        self.processing_frame.pack_forget()
+        self.qr_frame.pack_forget()
+        self.output.config(text="")
+        self.frame.pack(padx=25, pady=10, fill="both")
+
+    
+    def show_stack(self):
+        if not self.stackRiwayat:
+            messagebox.showinfo("Info", "Belum ada pemesanan!")
+            return
+
+        last = self.stackRiwayat[-1]
+
+        messagebox.showinfo("Pemesanan Terakhir (STACK)", f"""
+Nama   : {last.nama}
+Konser : {last.konser}
+Kelas  : {last.kelas}
+Jumlah : {last.jumlah}
+Total  : Rp {last.total:,}
+""")
+
+    def show_queue(self):
+        if not self.queueRiwayat:
+            messagebox.showinfo("Info", "Belum ada pemesanan!")
+            return
+
+        data = "=== SEMUA PEMESAN ===\n"
+
+        for i, t in enumerate(self.queueRiwayat, start=1):
+            data += f"{i}. {t.nama} - {t.konser} ({t.kelas})\n"
+
+        messagebox.showinfo("Daftar Pemesan (QUEUE)", data)
+
+
+root = tk.Tk()
+app = TicketApp(root)
+root.mainloop()
+
+

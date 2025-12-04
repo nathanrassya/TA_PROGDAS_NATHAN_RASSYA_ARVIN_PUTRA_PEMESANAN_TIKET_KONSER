@@ -15,41 +15,36 @@ class Ticket:
         self.timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
 
 
-
 class TicketApp:
     def __init__(self, root):
         self.root = root
         root.title("Aplikasi Pemesanan Tiket Konser")
-        root.geometry("520x700")
+        root.geometry("520x750")
         root.config(bg="#1e1e1e")
 
-        
         self.bg = "#1e1e1e"
         self.panel = "#2c2c2c"
         self.accent = "#0084ff"
         self.white = "#ffffff"
 
-        self.stackRiwayat = []        # LIFO
-        self.queueRiwayat = deque()   # FIFO
+        self.stackRiwayat = []    
+        self.queueRiwayat = deque() 
 
-       
+        self.undo_stack = []        
         self.title = tk.Label(root, text="TIKET KONSER",
                               font=("Arial", 26, "bold"),
                               fg=self.accent, bg=self.bg)
         self.title.pack(pady=15)
 
-        
         self.frame = tk.Frame(root, bg=self.panel, bd=2, relief="groove")
         self.frame.pack(padx=25, pady=10, fill="both")
 
         self.build_form()
 
-        
         self.output = tk.Label(root, text="", font=("Arial", 10),
                                fg=self.white, bg=self.bg, justify="left")
         self.output.pack(pady=10)
 
-       
         self.processing_frame = tk.Frame(root, bg=self.bg)
         self.processing_text = tk.Label(self.processing_frame, text="Processing...",
                                         font=("Arial", 20, "bold"),
@@ -61,7 +56,6 @@ class TicketApp:
                                        fg=self.accent, bg=self.bg)
         self.processing_bar.pack()
 
-        
         self.qr_frame = tk.Frame(root, bg=self.bg)
         self.qr_label = tk.Label(self.qr_frame, text="",
                                  font=("Courier", 10, "bold"),
@@ -69,14 +63,13 @@ class TicketApp:
                                  bd=3, relief="groove")
         self.qr_label.pack(pady=10)
 
-        
         self.back_btn = tk.Button(self.qr_frame, text="Kembali ke Halaman Awal",
                                   font=("Arial", 11, "bold"),
                                   bg=self.accent, fg="white",
                                   command=self.go_back)
         self.back_btn.pack(pady=5)
 
-       
+        
         tk.Button(root, text="Lihat Pemesanan Terakhir (STACK)",
                   bg=self.accent, fg="white", font=("Arial", 11, "bold"),
                   command=self.show_stack).pack(pady=5)
@@ -85,7 +78,14 @@ class TicketApp:
                   bg=self.accent, fg="white", font=("Arial", 11, "bold"),
                   command=self.show_queue).pack(pady=5)
 
-    
+        tk.Button(root, text="UNDO Pesanan Terakhir",
+                  bg="#ff4444", fg="white", font=("Arial", 11, "bold"),
+                  command=self.undo_pesanan).pack(pady=5)
+
+        tk.Button(root, text="REDO Pesanan",
+                  bg="#22cc22", fg="white", font=("Arial", 11, "bold"),
+                  command=self.redo_pesanan).pack(pady=5)
+
     def build_form(self):
         tk.Label(self.frame, text="Nama Pemesan",
                  font=("Arial", 12, "bold"),
@@ -127,7 +127,6 @@ class TicketApp:
                         command=self.start_processing)
         btn.pack(pady=15)
 
-   
     def start_processing(self):
         self.frame.pack_forget()
         self.output.config(text="")
@@ -145,7 +144,6 @@ class TicketApp:
             self.root.update()
             time.sleep(0.08)
 
-   
     def pesan(self):
         self.processing_frame.pack_forget()
 
@@ -171,6 +169,8 @@ class TicketApp:
         self.stackRiwayat.append(tiket)
         self.queueRiwayat.append(tiket)
 
+        self.undo_stack.clear()
+
         self.output.config(text=f"""
 ==== DETAIL PEMESANAN ====
 Nama      : {tiket.nama}
@@ -187,7 +187,6 @@ Total Bayar: Rp {tiket.total:,}
 
         self.frame.pack(padx=25, pady=10, fill="both")
 
-    
     def show_fake_qr(self, tiket):
         qr_text = f"""
 ██████████████████
@@ -204,14 +203,12 @@ Tiket  : {tiket.jumlah}
         self.qr_label.config(text=qr_text)
         self.qr_frame.pack(pady=5)
 
-    
     def go_back(self):
         self.processing_frame.pack_forget()
         self.qr_frame.pack_forget()
         self.output.config(text="")
         self.frame.pack(padx=25, pady=10, fill="both")
 
-    
     def show_stack(self):
         if not self.stackRiwayat:
             messagebox.showinfo("Info", "Belum ada pemesanan!")
@@ -239,9 +236,35 @@ Total  : Rp {last.total:,}
 
         messagebox.showinfo("Daftar Pemesan (QUEUE)", data)
 
+    
+    def undo_pesanan(self):
+        if not self.stackRiwayat:
+            messagebox.showinfo("Info", "Tidak ada pesanan untuk di-UNDO!")
+            return
+
+        undo_item = self.stackRiwayat.pop()
+        self.undo_stack.append(undo_item)
+
+        for t in list(self.queueRiwayat):
+            if t == undo_item:
+                self.queueRiwayat.remove(t)
+                break
+
+        messagebox.showinfo("UNDO", f"Pesanan '{undo_item.nama}' berhasil di-UNDO!")
+
+    
+    def redo_pesanan(self):
+        if not self.undo_stack:
+            messagebox.showinfo("Info", "Tidak ada pesanan untuk di-REDO!")
+            return
+
+        redo_item = self.undo_stack.pop()
+        self.stackRiwayat.append(redo_item)
+        self.queueRiwayat.append(redo_item)
+
+        messagebox.showinfo("REDO", f"Pesanan '{redo_item.nama}' berhasil di-REDO!")
+
 
 root = tk.Tk()
 app = TicketApp(root)
 root.mainloop()
-
-
